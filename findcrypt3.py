@@ -5,6 +5,7 @@ import idautils
 import idc
 import operator
 import yara
+import os
 
 VERSION = "0.2"
 YARARULES_CFGFILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "findcrypt3.rules")
@@ -79,7 +80,7 @@ p_initialized = False
 
 class YaraSearchResultChooser(idaapi.Choose2):
     def __init__(self, title, items, flags=0, width=None, height=None, embedded=False, modal=False):
-        Choose2.__init__(
+        idaapi.Choose2.__init__(
             self,
             title,
             [
@@ -104,7 +105,7 @@ class YaraSearchResultChooser(idaapi.Choose2):
 
     def OnGetLine(self, n):
         res = self.items[n]
-        res = [atoa(res[0]), res[1], res[2]]
+        res = [idc.atoa(res[0]), res[1], res[2]]
         return res
 
     def OnGetSize(self):
@@ -159,7 +160,7 @@ class Findcrypt_Plugin_t(idaapi.plugin_t):
     def toVirtualAddress(self, offset, segments):
         va_offset = 0
         for seg in segments:
-            if seg[1] < offset < seg[2]:
+            if seg[1] <= offset < seg[2]:
                 va_offset = seg[0] + (offset - seg[1])
         return va_offset
 
@@ -178,12 +179,13 @@ class Findcrypt_Plugin_t(idaapi.plugin_t):
             name = match.rule
             #print "%s => %d matches" % (name, len(match.strings))
             for string in match.strings:
-                #print "\t 0x%08x : %s" % (self.toVirtualAddress(string[0],offsets),repr(string[2]))
+                # print "\t 0x%08x : %s" % (self.toVirtualAddress(string[0],offsets),repr(string[2]))
                 value = [
                     self.toVirtualAddress(string[0], offsets),
                     name,
                     repr(string[2]),
                 ]
+                idc.set_name(value[0], name, 0)
                 values.append(value)
         print "<<< end yara search"
         return values
